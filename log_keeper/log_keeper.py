@@ -7,6 +7,7 @@ import os
 import gzip
 import shutil
 import uuid
+import tempfile
 
 
 class RotatingFileHandlerGz(logging.handlers.RotatingFileHandler):
@@ -94,7 +95,7 @@ class LogKeeper:
         self.internal_logger_name = internal_logger_name
         self.log_format_str = log_format_str
         self.log_date_format = log_date_format
-        self.run_threaded=run_threaded,
+        self.run_threaded=run_threaded
         self.additional_handlers = additional_handlers
         self.gzip_logs = gzip_logs
 
@@ -144,8 +145,10 @@ class LogKeeper:
             for handler in self.additional_handlers:
                 logger.addHandler(handler)
 
+        
         has_task_done = hasattr(self.logging_queue, "task_done")
-
+        
+        print(has_task_done)
         while True:
             try:
                 record = self.logging_queue.get()
@@ -169,7 +172,19 @@ class LogKeeper:
         self.logging_queue.put_nowait(LogKeeper._sentinel)
 
     def start(self):
+
         if self._logging_process is None:
+
+            if self.logging_queue is None:
+                self.logging_queue = LogKeeper.generate_logging_queue()
+
+            if self.log_file_path is None:
+                temp_dir = tempfile.gettempdir()
+                os.makedirs(temp_dir, exist_ok=True)
+                self.log_file_path = LogKeeper.generate_file_name(
+                    logging_dir_path=temp_dir
+                )
+
             try:
                 if self.run_threaded:
                     raise AssertionError("Force Thread")
@@ -188,7 +203,7 @@ class LogKeeper:
                 )
                 self._logging_process.start()
             except Exception as e:
-                pass
+                raise e
 
 
     def get_logging_queue(self):
