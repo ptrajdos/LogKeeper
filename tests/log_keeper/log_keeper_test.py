@@ -11,42 +11,29 @@ import time
 import multiprocessing as mp
 import threading as th
 
+def compute(name, queue):
+            logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="JLL")
+            logger.debug(f"GG?: {name}")
+            LogKeeper.shutdown_client_logger(logger)
+            return name
 
-class DebugJoinableQueue:
-    def __init__(self):
-        self.q = mp.JoinableQueue()
-        self.manager = mp.Manager()
-        self._counter = self.manager.Value("i", 0)
-        self._lock = mp.Lock()
+def is_test_deamonic():
+    try:
+        with mp.Manager():
+            return False
+    except Exception:
+        return True
 
-    def put(self, item):
-        with self._lock:
-            self._counter.value += 1
-        self.q.put(item)
+def join_with_timeout(q, timeout=5):
+    done = []
+    def _join():
+        q.join()
+        done.append(True)
 
-    def put_nowait(self, item):
-        with self._lock:
-            self._counter.value += 1
-        self.q.put_nowait(item)
-
-
-    def get(self):
-        return self.q.get()
-
-    def task_done(self):
-        with self._lock:
-            self._counter.value -= 1
-        self.q.task_done()
-
-    def join(self):
-        self.q.join()
-
-    def pending(self):
-        return self._counter.value
-
-    def __getattr__(self, name):
-        """Forward other methods like qsize(), empty(), full() etc."""
-        return getattr(self.q, name)
+    t = th.Thread(target=_join)
+    t.start()
+    t.join(timeout)
+    return bool(done)
 
 class LogKeeperTest(unittest.TestCase):
 
@@ -150,8 +137,9 @@ class LogKeeperTest(unittest.TestCase):
             "Temporary contain empty files after performing logging",
         )
 
-    def test_joinable_queue(self):
+    def test_joinable_queue_threading(self):
         #TODO problem with joinable queue!
+        #Only thread run!
         # raise unittest.SkipTest()
         temp_dir = tempfile.TemporaryDirectory()
 
@@ -160,18 +148,16 @@ class LogKeeperTest(unittest.TestCase):
         )
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
-        jq = DebugJoinableQueue()
+        jq = mp.JoinableQueue()
         log_keeper = LogKeeper(log_file_path=log_file_path, logging_queue=jq, run_threaded=True)
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance(logger_name="Fancy logger")
         self.generate_logs(logger, n=100)
         log_keeper.quit()
+        time.sleep(2)
 
-        #TODO hangs there
-        # pending = jq.pending()
-        # self.assertTrue(pending == 0, "There are pending records in the queue")
-        
+        self.assertTrue(join_with_timeout(jq, timeout=3))
 
         self.assertTrue(
             len(os.listdir(temp_dir.name)) > 0,
@@ -236,7 +222,10 @@ class LogKeeperTest(unittest.TestCase):
     def test_start_quit_default(self):
         log_keeper = LogKeeper(run_threaded=False)
         log_keeper.start()
-        self.assertIsInstance(log_keeper._logging_process, mp.Process, "Not running in process")
+        if not is_test_deamonic():
+            self.assertIsInstance(log_keeper._logging_process, mp.Process, "Not running in process")
+        else:
+            self.assertIsInstance(log_keeper._logging_process, th.Thread, "Running in thread")
 
         logger = log_keeper.get_client_logger_instance(logger_name="Fancy logger")
         self.generate_logs(logger, n=100)
@@ -255,7 +244,7 @@ class LogKeeperTest(unittest.TestCase):
         self.generate_logs(logger, n=100)
         log_keeper.quit()
 
-    def test_getting_client_loggers(self):
+    def test_getting_client_loggers_loky(self):
         log_dir = tempfile.gettempdir()
         os.makedirs(log_dir, exist_ok=True)
         log_file = os.path.splitext(os.path.basename(__file__))[0]
@@ -272,20 +261,54 @@ class LogKeeperTest(unittest.TestCase):
         )
         lp.start()
 
-        def compute(name, queue):
-            logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="JLL")
-            logger.debug(f"GG?: {name}")
-            LogKeeper.shutdown_client_logger(logger)
-            return name
+        logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="MPC")
+        logger.debug("Before parallel")
+
+        n_total = 5
+        deamonic_test = is_test_deamonic()
+
+        rets = Parallel(
+            n_jobs=-1,
+            total=n_total,
+            desc=f"Computations",
+            backend="threading" if deamonic_test else "loky",
+        )(delayed(compute)(name, queue) for name in [f"N_{i}" for i in range(n_total)])
+
+        logger.debug("After Parallel!")
+        time.sleep(3)
+        logger.debug("After sleep")
+        lp.quit()
+        self.assertTrue(queue == lp.get_logging_queue(), "Queues are not equal")
+
+    def test_getting_client_loggers_mp(self):
+        # raise unittest.SkipTest() #Some problems
+    
+        log_dir = tempfile.gettempdir()
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.splitext(os.path.basename(__file__))[0]
+        log_file_path = LogKeeper.generate_file_name(
+            logging_dir_path=log_dir, name_prefix=log_file
+        )
+
+        queue = LogKeeper.generate_logging_queue()
+
+        lp = LogKeeper(
+            logging_queue=queue,
+            log_file_path=log_file_path,
+            run_threaded=False,
+        )
+        lp.start()
+
 
         logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="MPC")
         logger.debug("Before parallel")
 
         n_total = 5
+        deamonic_test = is_test_deamonic()
+
         rets = Parallel(
             n_jobs=-1,
-            total=n_total,
-            desc=f"Computations",
+            backend="threading" if deamonic_test else "multiprocessing",
         )(delayed(compute)(name, queue) for name in [f"N_{i}" for i in range(n_total)])
 
         logger.debug("After Parallel!")

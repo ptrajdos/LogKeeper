@@ -8,6 +8,7 @@ import gzip
 import shutil
 import uuid
 import tempfile
+import queue
 
 
 class RotatingFileHandlerGz(logging.handlers.RotatingFileHandler):
@@ -51,7 +52,13 @@ class LogKeeper:
 
     @staticmethod
     def generate_logging_queue():
-        return mp.Manager().Queue()
+        try:
+            return mp.Manager().Queue()
+        except Exception as e:
+            logging.warning("LogKeeper:Using default queue!", exc_info=True)
+            return queue.Queue()
+
+
 
     @staticmethod
     def get_client_logger(logging_queue, logging_level=logging.DEBUG, logger_name=None):
@@ -148,7 +155,6 @@ class LogKeeper:
         
         has_task_done = hasattr(self.logging_queue, "task_done")
         
-        print(has_task_done)
         while True:
             try:
                 record = self.logging_queue.get()
