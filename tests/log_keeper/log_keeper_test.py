@@ -73,7 +73,7 @@ class LogKeeperTest(unittest.TestCase):
         self.assertTrue(os.access(temp_dir.name, os.X_OK), "Temp directory not executable before tests")
 
 
-    def check_temp_dir_after(self,temp_dir):
+    def check_temp_dir_after(self,temp_dir, count_rows=True, exp_rows = 100):
 
         self.assertTrue(os.path.exists(temp_dir.name), "Temporary Log directory not exists.")
         self.assertTrue(os.access(temp_dir.name, os.W_OK), "Temp directory not writable after logging.")
@@ -96,7 +96,15 @@ class LogKeeperTest(unittest.TestCase):
             self.assertTrue(os.access(f, os.W_OK), f"Logfile {f} is not writable.")
             self.assertTrue(os.access(f, os.R_OK), f"Logfile {f} is not readable.")
 
+        if count_rows:
+            for file in selected_files:
+                with open(file, "r") as fh:
+                    count = sum(1 for _ in fh)
+                    self.assertTrue(count == exp_rows, "Wrong number of rows")
+
     def test_start(self):
+        #TODO failure in test_parallel
+        # Number of rows in log -- not all rows appear in files
         temp_dir = tempfile.TemporaryDirectory()
 
         self.check_temp_dir_init(temp_dir=temp_dir)
@@ -106,10 +114,11 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance()
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
 
-        self.check_temp_dir_after(temp_dir=temp_dir)
+        self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
         
 
@@ -123,10 +132,11 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance()
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
 
-        self.check_temp_dir_after(temp_dir)
+        self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
 
     def test_root_logger(self):
@@ -139,10 +149,11 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance()
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
 
-        self.check_temp_dir_after(temp_dir)
+        self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
 
     def test_joinable_queue_threading(self):
@@ -156,17 +167,20 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance(logger_name="Fancy logger")
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
         time.sleep(2)
 
         self.assertTrue(join_with_timeout(jq, timeout=3))
 
-        self.check_temp_dir_after(temp_dir)
+        self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
 
 
     def test_start_idempotent(self):
+        #TODO failure in test parallel
+        # Number of rows in log -- not all rows appear in files
         temp_dir = tempfile.TemporaryDirectory()
 
         self.check_temp_dir_init(temp_dir=temp_dir)
@@ -177,10 +191,11 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance()
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
 
-        self.check_temp_dir_after(temp_dir)
+        self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
 
     def test_quit_idempotent(self):
@@ -193,11 +208,12 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.start()
 
         logger = log_keeper.get_client_logger_instance()
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
         log_keeper.quit()
 
-        self.check_temp_dir_after(temp_dir)
+        self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
 
     def test_start_quit_default(self):
@@ -209,7 +225,8 @@ class LogKeeperTest(unittest.TestCase):
             self.assertIsInstance(log_keeper._logging_process, th.Thread, "Running in thread")
 
         logger = log_keeper.get_client_logger_instance(logger_name="Fancy logger")
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         LogKeeper.shutdown_client_logger(logger)
         log_keeper.quit()
 
@@ -222,10 +239,12 @@ class LogKeeperTest(unittest.TestCase):
         self.assertIsInstance(log_keeper._logging_process, th.Thread, "Not running in thread")
 
         logger = log_keeper.get_client_logger_instance()
-        self.generate_logs(logger, n=100)
+        n=100
+        self.generate_logs(logger, n=n)
         log_keeper.quit()
 
     def test_getting_client_loggers_loky(self):
+        #TODO check logs!
         log_dir = tempfile.gettempdir()
         os.makedirs(log_dir, exist_ok=True)
         log_file = os.path.splitext(os.path.basename(__file__))[0]
@@ -262,6 +281,7 @@ class LogKeeperTest(unittest.TestCase):
         self.assertTrue(queue == lp.get_logging_queue(), "Queues are not equal")
 
     def test_getting_client_loggers_mp(self):
+        #TODO check logs!
     
         log_dir = tempfile.gettempdir()
         os.makedirs(log_dir, exist_ok=True)
