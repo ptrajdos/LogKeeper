@@ -138,9 +138,6 @@ class LogKeeperTest(unittest.TestCase):
         )
 
     def test_joinable_queue_threading(self):
-        #TODO problem with joinable queue!
-        #Only thread run!
-        # raise unittest.SkipTest()
         temp_dir = tempfile.TemporaryDirectory()
 
         self.assertTrue(
@@ -168,6 +165,7 @@ class LogKeeperTest(unittest.TestCase):
             self.has_nonempty_files(temp_dir.name),
             "Temporary contain empty files after performing logging",
         )
+
 
     def test_start_idempotent(self):
         temp_dir = tempfile.TemporaryDirectory()
