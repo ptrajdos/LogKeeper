@@ -100,7 +100,7 @@ class LogKeeperTest(unittest.TestCase):
             for file in selected_files:
                 with open(file, "r") as fh:
                     count = sum(1 for _ in fh)
-                    self.assertTrue(count == exp_rows, "Wrong number of rows")
+                    self.assertTrue(count == exp_rows, f"Wrong number of rows. Expected {exp_rows}, got {count} ")
 
     def test_start(self):
         #TODO failure in test_parallel
@@ -140,6 +140,7 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_root_logger(self):
+        #TODO number of rows bug on FreeBSD
         temp_dir = tempfile.TemporaryDirectory()
 
         self.check_temp_dir_init(temp_dir=temp_dir)
