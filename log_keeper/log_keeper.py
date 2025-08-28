@@ -55,7 +55,6 @@ class LogKeeper:
         try:
             return mp.Manager().Queue()
         except Exception as e:
-            logging.warning("LogKeeper:Using failsafe queue!", exc_info=False)
             return queue.Queue()
 
 
@@ -173,6 +172,9 @@ class LogKeeper:
                     "Exception during handling queue record",
                     exc_info=True,
                 )
+            except Exception as e:
+                print(f"Unexpected exception in Logkeeper process: {e}")
+                raise e
 
         logging.shutdown()
         return None
