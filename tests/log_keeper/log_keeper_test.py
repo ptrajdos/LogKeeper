@@ -10,6 +10,7 @@ from joblib import Parallel
 import time
 import multiprocessing as mp
 import threading as th
+from pathlib import Path
 
 def compute(name, queue):
             logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="JLL")
@@ -62,12 +63,43 @@ class LogKeeperTest(unittest.TestCase):
             for f in os.listdir(directory)
         )
 
+    def check_temp_dir_init(self,temp_dir):
+        self.assertTrue(os.path.exists(temp_dir.name), "Temporary Log directory not exists before tests.")
+        self.assertTrue(
+            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty before tests"
+        )
+        self.assertTrue(os.access(temp_dir.name, os.W_OK), "Temp directory not writable before tests")
+        self.assertTrue(os.access(temp_dir.name, os.R_OK), "Temp directory not readable before tests")
+        self.assertTrue(os.access(temp_dir.name, os.X_OK), "Temp directory not executable before tests")
+
+
+    def check_temp_dir_after(self,temp_dir):
+
+        self.assertTrue(os.path.exists(temp_dir.name), "Temporary Log directory not exists.")
+        self.assertTrue(os.access(temp_dir.name, os.W_OK), "Temp directory not writable after logging.")
+        self.assertTrue(os.access(temp_dir.name, os.R_OK), "Temp directory not readable after logging.")
+        self.assertTrue(os.access(temp_dir.name, os.X_OK), "Temp directory not executable after logging.")
+
+        self.assertTrue(
+            len(os.listdir(temp_dir.name)) > 0,
+            "Temporary directory is empty after performing logging",
+        )
+
+        self.assertTrue(
+            self.has_nonempty_files(temp_dir.name),
+            "Temporary contain empty files after performing logging",
+        )
+        selected_files = list(Path(temp_dir.name).glob("logfile*.log*"))
+        self.assertTrue(len(selected_files)>0, "Afert logging Temp directory contains no log files.")
+
+        for f in selected_files:
+            self.assertTrue(os.access(f, os.W_OK), f"Logfile {f} is not writable.")
+            self.assertTrue(os.access(f, os.R_OK), f"Logfile {f} is not readable.")
+
     def test_start(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         log_keeper = LogKeeper(log_file_path=log_file_path)
@@ -77,22 +109,14 @@ class LogKeeperTest(unittest.TestCase):
         self.generate_logs(logger, n=100)
         log_keeper.quit()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) > 0,
-            "Temporary directory is empty after performing logging",
-        )
-
-        self.assertTrue(
-            self.has_nonempty_files(temp_dir.name),
-            "Temporary contain empty files after performing logging",
-        )
+        self.check_temp_dir_after(temp_dir=temp_dir)
+        temp_dir.cleanup()
+        
 
     def test_not_daemon(self):
         temp_dir = tempfile.TemporaryDirectory()
-
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         log_keeper = LogKeeper(log_file_path=log_file_path, daemon=False)
@@ -102,22 +126,13 @@ class LogKeeperTest(unittest.TestCase):
         self.generate_logs(logger, n=100)
         log_keeper.quit()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) > 0,
-            "Temporary directory is empty after performing logging",
-        )
-
-        self.assertTrue(
-            self.has_nonempty_files(temp_dir.name),
-            "Temporary contain empty files after performing logging",
-        )
+        self.check_temp_dir_after(temp_dir)
+        temp_dir.cleanup()
 
     def test_root_logger(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         log_keeper = LogKeeper(log_file_path=log_file_path, internal_logger_name=None)
@@ -127,22 +142,13 @@ class LogKeeperTest(unittest.TestCase):
         self.generate_logs(logger, n=100)
         log_keeper.quit()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) > 0,
-            "Temporary directory is empty after performing logging",
-        )
-
-        self.assertTrue(
-            self.has_nonempty_files(temp_dir.name),
-            "Temporary contain empty files after performing logging",
-        )
+        self.check_temp_dir_after(temp_dir)
+        temp_dir.cleanup()
 
     def test_joinable_queue_threading(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         jq = mp.JoinableQueue()
@@ -156,23 +162,14 @@ class LogKeeperTest(unittest.TestCase):
 
         self.assertTrue(join_with_timeout(jq, timeout=3))
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) > 0,
-            "Temporary directory is empty after performing logging",
-        )
-
-        self.assertTrue(
-            self.has_nonempty_files(temp_dir.name),
-            "Temporary contain empty files after performing logging",
-        )
+        self.check_temp_dir_after(temp_dir)
+        temp_dir.cleanup()
 
 
     def test_start_idempotent(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         log_keeper = LogKeeper(log_file_path=log_file_path)
@@ -183,21 +180,13 @@ class LogKeeperTest(unittest.TestCase):
         self.generate_logs(logger, n=100)
         log_keeper.quit()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) > 0,
-            "Temporary directory is empty after performing logging",
-        )
-        self.assertTrue(
-            self.has_nonempty_files(temp_dir.name),
-            "Temporary contain empty files after performing logging",
-        )
+        self.check_temp_dir_after(temp_dir)
+        temp_dir.cleanup()
 
     def test_quit_idempotent(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         log_keeper = LogKeeper(log_file_path=log_file_path)
@@ -208,14 +197,8 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper.quit()
         log_keeper.quit()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) > 0,
-            "Temporary directory is empty after performing logging",
-        )
-        self.assertTrue(
-            self.has_nonempty_files(temp_dir.name),
-            "Temporary contain empty files after performing logging",
-        )
+        self.check_temp_dir_after(temp_dir)
+        temp_dir.cleanup()
 
     def test_start_quit_default(self):
         log_keeper = LogKeeper(run_threaded=False)
@@ -279,7 +262,6 @@ class LogKeeperTest(unittest.TestCase):
         self.assertTrue(queue == lp.get_logging_queue(), "Queues are not equal")
 
     def test_getting_client_loggers_mp(self):
-        # raise unittest.SkipTest() #Some problems
     
         log_dir = tempfile.gettempdir()
         os.makedirs(log_dir, exist_ok=True)
@@ -318,9 +300,7 @@ class LogKeeperTest(unittest.TestCase):
     def test_rotation(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         back_count = 3
@@ -350,9 +330,7 @@ class LogKeeperTest(unittest.TestCase):
     def test_rotation_no_gzip(self):
         temp_dir = tempfile.TemporaryDirectory()
 
-        self.assertTrue(
-            len(os.listdir(temp_dir.name)) == 0, "Temporary directory is not empty"
-        )
+        self.check_temp_dir_init(temp_dir=temp_dir)
 
         log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
         back_count = 3
@@ -397,9 +375,6 @@ class LogKeeperTest(unittest.TestCase):
         stream_value = log_stream.getvalue()
         self.assertTrue(len(stream_value) > 0, "Stream is empty")
         self.assertTrue(f"Test log: {n-1} " in stream_value, f"String stream do not contain 'Test log: {n-1}")
-
-        
-
 
 if __name__ == "___main__":
     unittest.main()

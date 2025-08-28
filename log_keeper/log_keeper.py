@@ -55,7 +55,7 @@ class LogKeeper:
         try:
             return mp.Manager().Queue()
         except Exception as e:
-            logging.warning("LogKeeper:Using default queue!", exc_info=True)
+            logging.warning("LogKeeper:Using failsafe queue!", exc_info=False)
             return queue.Queue()
 
 
@@ -112,7 +112,8 @@ class LogKeeper:
 
     def run(self) -> None:
 
-        open(self.log_file_path, "w+").close()
+        open(self.log_file_path, "w").close()
+        assert os.path.exists(self.log_file_path), "Log file has not been created"
 
         log_format_str = (
             "%(asctime)s.%(msecs)03d;%(name)s;%(levelname)s;[%(processName)s - %(threadName)s]:%(message)s"
@@ -162,6 +163,8 @@ class LogKeeper:
                     if has_task_done:
                         self.logging_queue.task_done()
                     break
+
+                assert os.path.exists(self.log_file_path), "Log file has deleted"
                 logger.handle(record)
                 if has_task_done:
                     self.logging_queue.task_done()
