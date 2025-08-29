@@ -103,8 +103,6 @@ class LogKeeperTest(unittest.TestCase):
                     self.assertTrue(count == exp_rows, f"Wrong number of rows. Expected {exp_rows}, got {count} ")
 
     def test_start(self):
-        #TODO failure in test_parallel
-        # Number of rows in log -- not all rows appear in files
         temp_dir = tempfile.TemporaryDirectory()
 
         self.check_temp_dir_init(temp_dir=temp_dir)
@@ -116,6 +114,7 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance()
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
         self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
@@ -134,13 +133,13 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance()
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
         self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
         temp_dir.cleanup()
 
     def test_root_logger(self):
-        #TODO number of rows bug on FreeBSD
         temp_dir = tempfile.TemporaryDirectory()
 
         self.check_temp_dir_init(temp_dir=temp_dir)
@@ -152,6 +151,7 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance()
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
         self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
@@ -170,6 +170,7 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance(logger_name="Fancy logger")
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
         time.sleep(2)
 
@@ -180,8 +181,6 @@ class LogKeeperTest(unittest.TestCase):
 
 
     def test_start_idempotent(self):
-        #TODO failure in test parallel
-        # Number of rows in log -- not all rows appear in files
         temp_dir = tempfile.TemporaryDirectory()
 
         self.check_temp_dir_init(temp_dir=temp_dir)
@@ -194,6 +193,7 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance()
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
         self.check_temp_dir_after(temp_dir=temp_dir, count_rows=True, exp_rows=n)
@@ -211,6 +211,7 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance()
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
         log_keeper.quit()
 
@@ -242,6 +243,7 @@ class LogKeeperTest(unittest.TestCase):
         logger = log_keeper.get_client_logger_instance()
         n=100
         self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
     def test_getting_client_loggers_loky(self):
@@ -332,6 +334,7 @@ class LogKeeperTest(unittest.TestCase):
 
         logger = log_keeper.get_client_logger_instance()
         self.generate_logs(logger, n=1000)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
         self.assertTrue(
@@ -363,6 +366,7 @@ class LogKeeperTest(unittest.TestCase):
 
         logger = log_keeper.get_client_logger_instance()
         self.generate_logs(logger, n=1000)
+        LogKeeper.shutdown_client_logger(logger=logger)
         log_keeper.quit()
 
         self.assertTrue(

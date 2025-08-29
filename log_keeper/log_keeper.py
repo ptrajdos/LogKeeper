@@ -60,7 +60,7 @@ class LogKeeper:
 
 
     @staticmethod
-    def get_client_logger(logging_queue, logging_level=logging.DEBUG, logger_name=None):
+    def get_client_logger(logging_queue, logging_level=logging.DEBUG, logger_name=None)->logging.Logger:
         qh = logging.handlers.QueueHandler(logging_queue)
         logger = logging.getLogger(name=logger_name)
         logger.setLevel(logging_level)
@@ -68,7 +68,7 @@ class LogKeeper:
         return logger
 
     @staticmethod
-    def shutdown_client_logger(logger):
+    def shutdown_client_logger(logger:logging.Logger):
         for handler in logger.handlers[:]:
             handler.flush()
             handler.close()
