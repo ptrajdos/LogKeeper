@@ -57,8 +57,6 @@ class LogKeeper:
         except Exception as e:
             return queue.Queue()
 
-
-
     @staticmethod
     def get_client_logger(logging_queue, logging_level=logging.DEBUG, logger_name=None)->logging.Logger:
         qh = logging.handlers.QueueHandler(logging_queue)
@@ -73,6 +71,12 @@ class LogKeeper:
             handler.flush()
             handler.close()
             logger.removeHandler(handler)
+
+    @staticmethod
+    def get_default_log_formatter():
+        log_format_str = "%(asctime)s.%(msecs)03d;%(name)s;%(levelname)s;[%(processName)s - %(threadName)s]:%(message)s"            
+        log_date_format = "%Y-%m-%d %H:%M:%S"
+        return  logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
 
     def __init__(
         self,
@@ -114,16 +118,7 @@ class LogKeeper:
         open(self.log_file_path, "w").close()
         assert os.path.exists(self.log_file_path), "Log file has not been created"
 
-        log_format_str = (
-            "%(asctime)s.%(msecs)03d;%(name)s;%(levelname)s;[%(processName)s - %(threadName)s]:%(message)s"
-            if self.log_format_str is None
-            else self.log_format_str
-        )
-        log_date_format = (
-            "%Y-%m-%d %H:%M:%S"
-            if self.log_date_format is None
-            else self.log_date_format
-        )
+        
         if self.gzip_logs:
             handler = RotatingFileHandlerGz(
                 self.log_file_path, maxBytes=self.max_bytes, backupCount=self.backup_count
@@ -134,7 +129,7 @@ class LogKeeper:
             )
 
         handler.setFormatter(
-            logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
+            self.get_log_formatter()
         )
 
         logging.captureWarnings(True)
@@ -190,7 +185,7 @@ class LogKeeper:
                 self.logging_queue = LogKeeper.generate_logging_queue()
 
             if self.log_file_path is None:
-                temp_dir = tempfile.gettempdir()
+                temp_dir = tempfile.mkdtemp()
                 os.makedirs(temp_dir, exist_ok=True)
                 self.log_file_path = LogKeeper.generate_file_name(
                     logging_dir_path=temp_dir
@@ -220,18 +215,30 @@ class LogKeeper:
     def get_logging_queue(self):
         return self.logging_queue
 
-    def get_client_logger_instance(self, logging_level=logging.DEBUG, logger_name=None):
+    def get_client_logger_instance(self, logging_level=logging.DEBUG, logger_name='ClientLogger'):
         return LogKeeper.get_client_logger(
             logging_queue=self.logging_queue,
             logging_level=logging_level,
             logger_name=logger_name,
         )
 
-                
-
-
     def quit(self):
         if self._logging_process is not None:
             self._enqueue_sentinel()
             self._logging_process.join()
             self._logging_process = None
+
+    def get_log_formatter(self):
+        log_format_str = (
+            "%(asctime)s.%(msecs)03d;%(name)s;%(levelname)s;[%(processName)s - %(threadName)s]:%(message)s"
+            if self.log_format_str is None
+            else self.log_format_str
+        )
+        log_date_format = (
+            "%Y-%m-%d %H:%M:%S"
+            if self.log_date_format is None
+            else self.log_date_format
+        )
+        
+        return  logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
+        
