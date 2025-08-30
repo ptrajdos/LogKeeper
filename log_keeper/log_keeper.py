@@ -170,6 +170,12 @@ class LogKeeper:
             except Exception as e:
                 print(f"Unexpected exception during handling queue record: {e}",file=sys.stderr)
                 raise e
+            
+        for i_handler in logger.handlers[:]:
+            i_handler.flush()
+            i_handler.close()
+            logger.removeHandler(i_handler)
+            
         return None
 
     def _enqueue_sentinel(self):
