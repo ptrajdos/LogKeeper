@@ -143,7 +143,7 @@ class LogKeeper:
             # Root logger
             unique_logger_name = self.internal_logger_name
 
-        logger = logging.getLogger(unique_logger_name)
+        logger = logging.getLogger(unique_logger_name)        
         logger.setLevel(self.logging_level)
         logger.addHandler(handler)
 
@@ -161,7 +161,7 @@ class LogKeeper:
                         self.logging_queue.task_done()
                     break
 
-                assert os.path.exists(self.log_file_path), "Log file has deleted"
+                assert os.path.exists(self.log_file_path), "Log file has been deleted"
                 logger.handle(record)
                 if has_task_done:
                     self.logging_queue.task_done()
@@ -170,8 +170,6 @@ class LogKeeper:
             except Exception as e:
                 print(f"Unexpected exception during handling queue record: {e}",file=sys.stderr)
                 raise e
-
-        logging.shutdown()
         return None
 
     def _enqueue_sentinel(self):

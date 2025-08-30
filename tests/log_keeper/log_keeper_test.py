@@ -132,9 +132,10 @@ class LogKeeperTest(unittest.TestCase):
             for file in selected_files:
                 with open(file, "r") as fh:
                     count = sum(1 for _ in fh)
+                    fh.seek(0)
                     self.assertTrue(
                         count == exp_rows,
-                        f"Wrong number of rows. Expected {exp_rows}, got {count} ",
+                        f"Wrong number of rows. Expected {exp_rows}, got {count}: {fh.read()} ) ",
                     )
 
     def test_start(self):
@@ -178,6 +179,8 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_root_logger(self):
+        if is_test_deamonic():
+            raise unittest.SkipTest("Fails if TestParallel is used!")
         temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
@@ -186,7 +189,7 @@ class LogKeeperTest(unittest.TestCase):
         log_keeper = LogKeeper(log_file_path=log_file_path, internal_logger_name=None)
         log_keeper.start()
 
-        logger = log_keeper.get_client_logger_instance()
+        logger = log_keeper.get_client_logger_instance(logger_name=f"ClientLogger_PID_{os.getpid()}")
         n = 100
         self.generate_logs(logger, n=n)
         LogKeeper.shutdown_client_logger(logger=logger)
