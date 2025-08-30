@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import sys
 import threading as th
 import logging
 import logging.handlers
@@ -44,7 +45,7 @@ class LogKeeper:
 
     @staticmethod
     def generate_file_name(logging_dir_path, name_prefix="logfile"):
-        date_string = datetime.now().strftime("%Y_%m_%d_%H-%M-%S")
+        date_string = datetime.now().strftime("%Y_%m_%d_%H-%M-%S-%f")
         log_filename = "{}_{}.log".format(name_prefix, date_string)
         log_file_path = os.path.join(logging_dir_path, log_filename)
 
@@ -58,7 +59,9 @@ class LogKeeper:
             return queue.Queue()
 
     @staticmethod
-    def get_client_logger(logging_queue, logging_level=logging.DEBUG, logger_name=None)->logging.Logger:
+    def get_client_logger(
+        logging_queue, logging_level=logging.DEBUG, logger_name=None
+    ) -> logging.Logger:
         qh = logging.handlers.QueueHandler(logging_queue)
         logger = logging.getLogger(name=logger_name)
         logger.setLevel(logging_level)
@@ -66,7 +69,7 @@ class LogKeeper:
         return logger
 
     @staticmethod
-    def shutdown_client_logger(logger:logging.Logger):
+    def shutdown_client_logger(logger: logging.Logger):
         for handler in logger.handlers[:]:
             handler.flush()
             handler.close()
@@ -74,9 +77,9 @@ class LogKeeper:
 
     @staticmethod
     def get_default_log_formatter():
-        log_format_str = "%(asctime)s.%(msecs)03d;%(name)s;%(levelname)s;[%(processName)s - %(threadName)s]:%(message)s"            
+        log_format_str = "%(asctime)s.%(msecs)03d;%(name)s;%(levelname)s;[%(processName)s - %(threadName)s]:%(message)s"
         log_date_format = "%Y-%m-%d %H:%M:%S"
-        return  logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
+        return logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
 
     def __init__(
         self,
@@ -87,12 +90,12 @@ class LogKeeper:
         logging_level=logging.DEBUG,
         max_bytes=2**30,
         backup_count=3,
-        internal_logger_name='LoggerBaseInternal',
+        internal_logger_name="LoggerBaseInternal",
         log_format_str=None,
         log_date_format=None,
         run_threaded=False,
-        additional_handlers = None,
-        gzip_logs = True,
+        additional_handlers=None,
+        gzip_logs=True,
     ) -> None:
 
         self.name = name
@@ -105,38 +108,39 @@ class LogKeeper:
         self.internal_logger_name = internal_logger_name
         self.log_format_str = log_format_str
         self.log_date_format = log_date_format
-        self.run_threaded=run_threaded
+        self.run_threaded = run_threaded
         self.additional_handlers = additional_handlers
         self.gzip_logs = gzip_logs
 
         self._logging_process = None
 
-    
-
     def run(self) -> None:
 
-        open(self.log_file_path, "w").close()
+        open(self.log_file_path, "a").close()
         assert os.path.exists(self.log_file_path), "Log file has not been created"
 
-        
         if self.gzip_logs:
             handler = RotatingFileHandlerGz(
-                self.log_file_path, maxBytes=self.max_bytes, backupCount=self.backup_count
+                filename=self.log_file_path,
+                maxBytes=self.max_bytes,
+                backupCount=self.backup_count,
+                delay=True,
             )
         else:
             handler = logging.handlers.RotatingFileHandler(
-                self.log_file_path, maxBytes=self.max_bytes, backupCount=self.backup_count
+                filename=self.log_file_path,
+                maxBytes=self.max_bytes,
+                backupCount=self.backup_count,
+                delay=True,
             )
 
-        handler.setFormatter(
-            self.get_log_formatter()
-        )
+        handler.setFormatter(self.get_log_formatter())
 
         logging.captureWarnings(True)
         if self.internal_logger_name is not None:
             unique_logger_name = f"{self.internal_logger_name}_{uuid.uuid4()}"
         else:
-            #Root logger
+            # Root logger
             unique_logger_name = self.internal_logger_name
 
         logger = logging.getLogger(unique_logger_name)
@@ -147,9 +151,8 @@ class LogKeeper:
             for handler in self.additional_handlers:
                 logger.addHandler(handler)
 
-        
         has_task_done = hasattr(self.logging_queue, "task_done")
-        
+
         while True:
             try:
                 record = self.logging_queue.get()
@@ -163,12 +166,9 @@ class LogKeeper:
                 if has_task_done:
                     self.logging_queue.task_done()
             except (EOFError, BrokenPipeError) as e:
-                logger.warning(
-                    "Exception during handling queue record",
-                    exc_info=True,
-                )
+                print(f"Exception during handling queue record: {e}",file=sys.stderr)
             except Exception as e:
-                print(f"Unexpected exception in Logkeeper process: {e}")
+                print(f"Unexpected exception during handling queue record: {e}",file=sys.stderr)
                 raise e
 
         logging.shutdown()
@@ -185,8 +185,7 @@ class LogKeeper:
                 self.logging_queue = LogKeeper.generate_logging_queue()
 
             if self.log_file_path is None:
-                temp_dir = tempfile.mkdtemp()
-                os.makedirs(temp_dir, exist_ok=True)
+                temp_dir = tempfile.mkdtemp(prefix=str(os.getpid()))
                 self.log_file_path = LogKeeper.generate_file_name(
                     logging_dir_path=temp_dir
                 )
@@ -194,7 +193,7 @@ class LogKeeper:
             try:
                 if self.run_threaded:
                     raise AssertionError("Force Thread")
-                
+
                 self._logging_process = mp.Process(
                     target=self.run,
                     name=self.name,
@@ -211,11 +210,12 @@ class LogKeeper:
             except Exception as e:
                 raise e
 
-
     def get_logging_queue(self):
         return self.logging_queue
 
-    def get_client_logger_instance(self, logging_level=logging.DEBUG, logger_name='ClientLogger'):
+    def get_client_logger_instance(
+        self, logging_level=logging.DEBUG, logger_name="ClientLogger"
+    ):
         return LogKeeper.get_client_logger(
             logging_queue=self.logging_queue,
             logging_level=logging_level,
@@ -239,6 +239,5 @@ class LogKeeper:
             if self.log_date_format is None
             else self.log_date_format
         )
-        
-        return  logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
-        
+
+        return logging.Formatter(fmt=log_format_str, datefmt=log_date_format)

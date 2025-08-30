@@ -35,7 +35,7 @@ Repository = "https://github.com/ptrajdos/LogKeeper.git"
 [project.optional-dependencies]
 test = [
     'coverage==7.8.0',
-    'unittest-parallel==1.5.3',
+    'unittest-parallel==1.7.5',
     'pandas>=2.0.0',
     'pdoc3==0.11.1',
     'pytest==8.3.5',

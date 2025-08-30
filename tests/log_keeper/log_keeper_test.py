@@ -45,7 +45,7 @@ class LogKeeperTest(unittest.TestCase):
 
     def generate_logs(self, logger, n=100):
         for i in range(n):
-            logger.error(f"Test log: {i} ")
+            logger.debug(f"Test log: {i} ")
 
     def has_nonempty_files(self, directory):
         return all(
@@ -138,7 +138,7 @@ class LogKeeperTest(unittest.TestCase):
                     )
 
     def test_start(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -158,7 +158,7 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_not_daemon(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -178,7 +178,7 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_root_logger(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -198,7 +198,7 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_joinable_queue_threading(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -224,7 +224,7 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_start_idempotent(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -245,7 +245,7 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_quit_idempotent(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -368,7 +368,7 @@ class LogKeeperTest(unittest.TestCase):
         self.check_temp_dir_after(os.path.dirname(log_keeper.log_file_path), count_rows=True, exp_rows=n_cum_logs)
 
     def test_rotation(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 
@@ -400,7 +400,7 @@ class LogKeeperTest(unittest.TestCase):
         )
 
     def test_rotation_no_gzip(self):
-        temp_dir = tempfile.TemporaryDirectory()
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
 

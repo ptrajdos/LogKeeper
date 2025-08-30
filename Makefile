@@ -52,7 +52,7 @@ test: venv
 
 test_parallel: venv
 	mkdir -p ${COVDIR} ${LOGDIR}
-	${ACTIVATE}; ${UNITTEST_PARALLEL} --disable-process-pooling --class-fixtures -v -t ${ROOTDIR} -s ${TESTDIR} -p '*_test.py' --coverage --coverage-rcfile ./.coveragerc --coverage-source ${SRCDIR} --coverage-html ${COVDIR}  2>&1 |tee -a ${LOGFILE}
+	${ACTIVATE}; ${UNITTEST_PARALLEL} -j 0 --level module --disable-process-pooling -v -t ${ROOTDIR} -s ${TESTDIR} -p '*_test.py' --coverage --coverage-rcfile ./.coveragerc --coverage-source ${SRCDIR} --coverage-html ${COVDIR}  2>&1 |tee -a ${LOGFILE}
 
 docs: venv
 	${ACTIVATE}; $(PDOC) --force --html ${SRCDIR} --output-dir ${DOCS_DIR}
