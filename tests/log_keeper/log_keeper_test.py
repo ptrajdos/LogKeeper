@@ -198,6 +198,26 @@ class LogKeeperTest(unittest.TestCase):
         )
         temp_dir.cleanup()
 
+    def test_root_logger_client(self):
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
+
+        self.check_temp_dir_init(temp_dir_path=temp_dir.name)
+
+        log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
+        log_keeper = LogKeeper(log_file_path=log_file_path)
+        log_keeper.start()
+
+        logger = log_keeper.get_client_logger_instance(logger_name=None)
+        n = 100
+        self.generate_logs(logger, n=n)
+        LogKeeper.shutdown_client_logger(logger=logger)
+        log_keeper.quit()
+
+        self.check_temp_dir_after(
+            temp_dir_path=temp_dir.name, count_rows=True, exp_rows=n
+        )
+        temp_dir.cleanup()
+
     def test_joinable_queue_threading(self):
         temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
