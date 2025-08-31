@@ -7,6 +7,7 @@ from datetime import datetime
 import os
 import gzip
 import shutil
+import time
 import uuid
 import tempfile
 import queue
@@ -145,6 +146,8 @@ class LogKeeper:
 
         logger = logging.getLogger(unique_logger_name)        
         logger.setLevel(self.logging_level)
+        time.sleep(0.1)# Fixes bug with pytest_parallel
+
         logger.addHandler(handler)
 
         if self.additional_handlers is not None:

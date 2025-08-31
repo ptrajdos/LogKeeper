@@ -179,8 +179,6 @@ class LogKeeperTest(unittest.TestCase):
         temp_dir.cleanup()
 
     def test_root_logger(self):
-        if is_test_deamonic():
-            raise unittest.SkipTest("Fails if TestParallel is used!")
         temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
 
         self.check_temp_dir_init(temp_dir_path=temp_dir.name)
@@ -401,6 +399,7 @@ class LogKeeperTest(unittest.TestCase):
         self.assertTrue(
             self.has_gz_files(temp_dir.name), "No Gzipped files in the output directory"
         )
+        temp_dir.cleanup()
 
     def test_rotation_no_gzip(self):
         temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
@@ -437,6 +436,7 @@ class LogKeeperTest(unittest.TestCase):
             self.has_gz_files(temp_dir.name),
             "There are Gzipped files in the output directory",
         )
+        temp_dir.cleanup()
 
     def test_stream_handler_threaded(self):
         log_stream = io.StringIO()
