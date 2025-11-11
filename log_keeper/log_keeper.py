@@ -58,6 +58,10 @@ class LogKeeper:
             return mp.Manager().Queue()
         except Exception as e:
             return queue.Queue()
+        
+    @staticmethod
+    def generate_logging_queue2():
+        return mp.Queue()
 
     @staticmethod
     def get_client_logger(

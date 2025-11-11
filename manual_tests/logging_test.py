@@ -18,12 +18,12 @@ if __name__ == '__main__':
     log_file_path = LogKeeper.generate_file_name(logging_dir_path=log_dir, name_prefix=log_file)
     print(log_file_path)
     queue = LogKeeper.generate_logging_queue()
-    sh = logging.StreamHandler(stream=sys.stderr)
-    lp  = LogKeeper(logging_queue=queue,log_file_path=log_file_path, run_threaded=False, additional_handlers=[sh] )
+    sh = logging.StreamHandler(stream=sys.stderr)# causes problems
+    lp  = LogKeeper(logging_queue=queue,log_file_path=log_file_path, run_threaded=False, )
     lp.start()
 
     def compute(name, queue):
-        logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="JLL")
+        logger = LogKeeper.get_client_logger(logging_queue=queue, logger_name="JLL", logging_level=logging.ERROR)
         logger.debug(f"GG?: {name}")
         LogKeeper.shutdown_client_logger(logger)
         # raise Exception("A") #This causes EOF!
