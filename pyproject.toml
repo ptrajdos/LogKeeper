@@ -45,6 +45,7 @@ test = [
     'snakeviz>=2.2.2, <3.0.0',
     'pytest-timer>=1.0.0, <2.0.0',
     'joblib',
+    'tox>=4.0.0, <5.0.0',
 ]
 
 [tool.setuptools]
