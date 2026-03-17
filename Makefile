@@ -58,7 +58,7 @@ venv:
 	
 
 pypackages: venv
-	${ACTIVATE}; ${PIP} install -e ${ROOTDIR} --prefer-binary --log ${INSTALL_LOG_FILE} -r ${REQ_FILE}
+	${ACTIVATE}; ${PIP} install -e ${ROOTDIR}[test] --prefer-binary --log ${INSTALL_LOG_FILE}
 	touch $@
 
 test: pypackages
