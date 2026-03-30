@@ -252,3 +252,6 @@ class LogKeeper:
         )
 
         return logging.Formatter(fmt=log_format_str, datefmt=log_date_format)
+    
+    def get_logging_level(self):
+        return self.logging_level
