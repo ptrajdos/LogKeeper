@@ -11,6 +11,7 @@ import time
 import multiprocessing as mp
 import threading as th
 from pathlib import Path
+from unittest.mock import patch
 
 
 def compute(name, queue):
@@ -483,6 +484,30 @@ class LogKeeperTest(unittest.TestCase):
         stream_values = list(stream_value.split('\n')[:-1]) #All but empty line at the end
         self.assertTrue(len(stream_values) == n, f"Wrong number of entries. Expected {n}, got {len(stream_values)}")
         self.check_temp_dir_after(os.path.dirname(log_keeper.log_file_path), count_rows=True, exp_rows=n)
+
+    def test_stderr_handler_threaded(self):
+        log_stream_mock = io.StringIO()
+        # Handlers contain locks. Only thread run available
+        with patch('sys.stderr', new=log_stream_mock):
+            log_keeper = LogKeeper(run_threaded=True,stderr_handler=True)
+            log_keeper.start()
+            self.check_temp_dir_init(os.path.dirname(log_keeper.log_file_path), should_be_empty=False)
+
+            logger = log_keeper.get_client_logger_instance(logger_name="Fancy logger")
+            n = 100
+            self.generate_logs(logger, n=100)
+            LogKeeper.shutdown_client_logger(logger)
+            log_keeper.quit()
+        
+            stream_value = log_stream_mock.getvalue()
+            self.assertTrue(len(stream_value) > 0, "Stream is empty")
+            self.assertTrue(
+                f"Test log: {n-1} " in stream_value,
+                f"String stream do not contain 'Test log: {n-1}",
+            )
+            stream_values = list(stream_value.split('\n')[:-1]) #All but empty line at the end
+            self.assertTrue(len(stream_values) == n, f"Wrong number of entries. Expected {n}, got {len(stream_values)}")
+            self.check_temp_dir_after(os.path.dirname(log_keeper.log_file_path), count_rows=True, exp_rows=n)
 
 
 if __name__ == "___main__":

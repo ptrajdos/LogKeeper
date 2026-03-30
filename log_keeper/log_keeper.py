@@ -101,6 +101,7 @@ class LogKeeper:
         run_threaded=False,
         additional_handlers=None,
         gzip_logs=True,
+        stderr_handler=False,
     ) -> None:
 
         self.name = name
@@ -116,6 +117,7 @@ class LogKeeper:
         self.run_threaded = run_threaded
         self.additional_handlers = additional_handlers
         self.gzip_logs = gzip_logs
+        self.stderr_handler = stderr_handler
 
         self._logging_process = None
 
@@ -153,6 +155,11 @@ class LogKeeper:
         time.sleep(0.1)# Fixes bug with pytest_parallel
 
         logger.addHandler(handler)
+        
+        if self.stderr_handler:
+            stderr_handler = logging.StreamHandler(sys.stderr)
+            stderr_handler.setFormatter(self.get_log_formatter())
+            logger.addHandler(stderr_handler)
 
         if self.additional_handlers is not None:
             for handler in self.additional_handlers:

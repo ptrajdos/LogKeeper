@@ -19,7 +19,7 @@ if __name__ == '__main__':
     print(log_file_path)
     queue = LogKeeper.generate_logging_queue()
     sh = logging.StreamHandler(stream=sys.stderr)# causes problems
-    lp  = LogKeeper(logging_queue=queue,log_file_path=log_file_path, run_threaded=False, )
+    lp  = LogKeeper(logging_queue=queue,log_file_path=log_file_path, run_threaded=False, stderr_handler=True )
     lp.start()
 
     def compute(name, queue):
