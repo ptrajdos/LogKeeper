@@ -37,8 +37,13 @@ class RotatingFileHandlerGz(logging.handlers.RotatingFileHandler):
         Rename rotated file from
         """
         new_name = default_name.replace(".log.", ".log.gz.")
+
         return new_name
 
+def log_flusher(handler, interval=5):
+    while True:
+        time.sleep(interval)
+        handler.flush()
 
 class LogKeeper:
 
@@ -102,6 +107,10 @@ class LogKeeper:
         additional_handlers=None,
         gzip_logs=True,
         stderr_handler=False,
+        enable_memory_handler=False,
+        memory_handler_capacity=1000,
+        memory_handler_flush_level=logging.WARNING,
+        memory_handler_timeout=5.0,
     ) -> None:
 
         self.name = name
@@ -118,6 +127,10 @@ class LogKeeper:
         self.additional_handlers = additional_handlers
         self.gzip_logs = gzip_logs
         self.stderr_handler = stderr_handler
+        self.enable_memory_handler = enable_memory_handler
+        self.memory_handler_capacity = memory_handler_capacity
+        self.memory_handler_flush_level = memory_handler_flush_level
+        self.memory_handler_timeout = memory_handler_timeout
 
         self._logging_process = None
 
@@ -142,6 +155,18 @@ class LogKeeper:
             )
 
         handler.setFormatter(self.get_log_formatter())
+        
+        if self.enable_memory_handler:
+            memory_handler = logging.handlers.MemoryHandler(
+                capacity=self.memory_handler_capacity,
+                flushLevel=self.memory_handler_flush_level,
+                target=handler,
+            )
+            handler = memory_handler
+            if self.memory_handler_timeout is not None:
+                t = th.Thread(target=log_flusher, args=(memory_handler,self.memory_handler_timeout), daemon=True)
+                t.start()
+
 
         logging.captureWarnings(True)
         if self.internal_logger_name is not None:

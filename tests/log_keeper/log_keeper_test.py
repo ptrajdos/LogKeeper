@@ -459,6 +459,47 @@ class LogKeeperTest(unittest.TestCase):
         )
         temp_dir.cleanup()
 
+    def test_rotation_no_gzip_memory(self):
+        temp_dir = tempfile.TemporaryDirectory(prefix=f"PID_{os.getpid()}_")
+
+        self.check_temp_dir_init(temp_dir_path=temp_dir.name)
+
+        log_file_path = LogKeeper.generate_file_name(logging_dir_path=temp_dir.name)
+        back_count = 3
+        log_keeper = LogKeeper(
+            log_file_path=log_file_path,
+            max_bytes=10,
+            backup_count=back_count,
+            gzip_logs=False,
+            enable_memory_handler=True,
+            memory_handler_capacity=10,
+            memory_handler_flush_level=logging.ERROR,
+            memory_handler_timeout=5.0,
+        )
+        log_keeper.start()
+        self.check_temp_dir_init(os.path.dirname(log_keeper.log_file_path), should_be_empty=False)
+
+        logger = log_keeper.get_client_logger_instance()
+        self.generate_logs(logger, n=1000)
+        LogKeeper.shutdown_client_logger(logger=logger)
+        log_keeper.quit()
+
+        self.assertTrue(
+            len(os.listdir(temp_dir.name)) == back_count + 1,
+            "Wrong number of files after performing logging",
+        )
+
+        self.assertTrue(
+            self.has_nonempty_files(temp_dir.name),
+            "Temporary contain empty files after performing logging",
+        )
+
+        self.assertFalse(
+            self.has_gz_files(temp_dir.name),
+            "There are Gzipped files in the output directory",
+        )
+        temp_dir.cleanup()
+
     def test_stream_handler_threaded(self):
         log_stream = io.StringIO()
         sh = logging.StreamHandler(stream=log_stream)
